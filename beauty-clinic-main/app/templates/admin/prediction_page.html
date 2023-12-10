@@ -1,0 +1,125 @@
+{% extends 'base.html' %} {% load static %} {% block mycss %} {{ block.super }}
+<link rel="stylesheet" href="{% static 'css/common.css' %}" />
+{% endblock mycss %} {% load crispy_forms_tags %} {% block content %}
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<section id="verification" class="py-5">
+  <div class="container">
+    <div class="row">
+      <div class="col">
+        <div class="card  text-center">
+          <div class="card-header bg-warning text-black ">
+            <h4><i class="fas fa-sign-in-alt"></i> Sale Predictions</h4>
+          </div>
+          <div class="card-body " id="registerForm">
+            <form method="post">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="submit" value="Predict">
+            </form>
+          </div>
+            {% if selected_year and selected_month %}
+              <h4>Predicted Sales</h4>
+              <p>Year: {{ selected_year }}</p>
+              <p>Month: {{ selected_month }}</p>
+            {% endif %}
+           
+            {% if predictions %}
+              
+              <p>Predicted sales: {{ predictions }}</p>
+            {% endif %}
+        </div>
+      </div>
+      <div class="col">
+        <div class="card  text-center">
+          <div class="card-header bg-warning text-black ">
+            <h4><i class="fas fa-sign-in-alt"></i> Sales Graph</h4>
+          </div>
+          <div class="card-body ">
+            <canvas id="salesChart2" width="800" height="360"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+    
+  $(document).ready(function () {
+          $.ajax({
+              url: '/get-order-data/', // Replace with the URL for the new view
+              method: 'GET',
+              success: function (data) {
+                  createChart(data);
+              },
+              error: function (error) {
+                  console.error('Error:', error);
+              }
+          });
+      });
+
+      function createChart(data) {
+          var ctx = document.getElementById('salesChart2').getContext('2d');
+
+          var chartData = data.data;
+          var labels = data.labels;
+
+          var datasets = [];
+
+          for (var product in chartData) {
+              datasets.push({
+                  label: product,
+                  data: chartData[product],
+                  fill: false,
+                  borderColor: getRandomColor()
+              });
+          }
+
+          new Chart(ctx, {
+              type: 'line',
+              data: {
+                  labels: labels,
+                  datasets: datasets
+              },
+              options: {
+                  responsive: true,
+                  maintainAspectRatio: false,
+                  scales: {
+                    y: {
+                        suggestedMin: 0,  // Set the minimum value to zero
+                        stepSize: 1,      // Set the interval between ticks to 1
+                        title: {
+                            display: true,
+                            text: 'Sales'   // Set the Y axis title here
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Months'  // Set the X axis title here
+                        }
+                    }
+                },
+                  plugins:{
+                      title: {
+                          display: true,
+                          text: 'Sales'
+                      },
+                  }
+              }
+          });
+      }
+
+      function getRandomColor() {
+          var letters = '0123456789ABCDEF';
+          var color = '#';
+          for (var i = 0; i < 6; i++) {
+              color += letters[Math.floor(Math.random() * 16)];
+          }
+          return color;
+      }
+</script>
+{% endblock %}
