@@ -40,11 +40,7 @@ SECRET_KEY = 'django-insecure-cmf%aiq(sw8)t+f&h8zpyp_$f0!(jh@c!dw+1z@xk!339zs7dx
 DEBUG = True
 
 ALLOWED_HOSTS = [
-    '10.0.2.2',
-    '127.0.0.1',
-    'beautyclinic.pythonanywhere.com',
-    'localhost',
-    'https://beauty-clinic-1d3938ccf50d.herokuapp.com'
+    '.vercel.app'
 ]
 
 
