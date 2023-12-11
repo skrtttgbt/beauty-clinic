@@ -1,125 +1,157 @@
 {% extends 'base.html' %} {% load static %} {% block mycss %} {{ block.super }}
 <link rel="stylesheet" href="{% static 'css/common.css' %}" />
 {% endblock mycss %} {% load crispy_forms_tags %} {% block content %}
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.1/jquery.min.js" integrity="sha512-aVKKRRi/Q/YV+4mjoKBsE4x3H+BkegoM/em46NNlCqNTmUYADjBbeNefNxYV7giUp0VxICtqdrbqU7iVaeZNXA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
-<section id="verification" class="py-5">
-  <div class="container">
+    <!-- Include Chart.js library -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <section id="verification" class="py-5"> 
+  <div class="container pb-5">  
+    <h1>Sales Prediction</h1>
+    <!-- Display the sales data using Chart.js -->
+    <canvas id="salesChart" width="800" height="400"></canvas>
+  </div>
+  <div class="container" >
     <div class="row">
       <div class="col">
-        <div class="card  text-center">
-          <div class="card-header bg-warning text-black ">
-            <h4><i class="fas fa-sign-in-alt"></i> Sale Predictions</h4>
-          </div>
-          <div class="card-body " id="registerForm">
-            <form method="post">
-                {% csrf_token %}
-                {{ form.as_p }}
-                <input type="submit" value="Predict">
-            </form>
-          </div>
-            {% if selected_year and selected_month %}
-              <h4>Predicted Sales</h4>
-              <p>Year: {{ selected_year }}</p>
-              <p>Month: {{ selected_month }}</p>
-            {% endif %}
-           
-            {% if predictions %}
-              
-              <p>Predicted sales: {{ predictions }}</p>
-            {% endif %}
-        </div>
+    <h2>Annual Sales Data</h2>
+    <table class="table">
+        <thead>
+          <tr class="table-success">
+                <th>Order Date</th>
+                <th>Total Revenue</th>
+            </tr>
+        </thead>
+        <tbody id="annualSalesTableBody">
+            <!-- Table content will be dynamically generated here -->
+        </tbody>
+    </table>
       </div>
       <div class="col">
-        <div class="card  text-center">
-          <div class="card-header bg-warning text-black ">
-            <h4><i class="fas fa-sign-in-alt"></i> Sales Graph</h4>
-          </div>
-          <div class="card-body ">
-            <canvas id="salesChart2" width="800" height="360"></canvas>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
+  <h2>Predicted Sales</h2>
+  <table class="table">
+      <thead>
+        <tr class="table-danger">
+              <th>Order Date</th>
+              <th>Total Revenue</th>
+          </tr>
+      </thead>
+      <tbody id="PredictedSalesTableBody">
+          <!-- Table content will be dynamically generated here -->
+      </tbody>
+  </table>
+</div>
+</div>
+</div>
+</section>     
+<script>
+  // Parse the sales data from the Django template context
+  var historicalSalesData = JSON.parse('{{ annual_sales_data|safe }}');
+  var futureSalesData = JSON.parse('{{ future_sales|safe }}');
+
+  // Extract labels (years) and sales values for historical data
+  var historicalYears = historicalSalesData.map(item => item.Order_Date);
+  var historicalSales = historicalSalesData.map(item => item.Total_Revenue);
+
+  // Extract labels (years) and sales values for future data
+  var futureYears = futureSalesData.map(item => item.year);
+  var futureSales = futureSalesData.map(item => item.sales);
+
+  // Combine historical and future data
+  var allYears = historicalYears.concat(futureYears);
+  var allSales = historicalSales.concat(futureSales);
+
+  // Sort data based on years
+  var sortedData = allYears.map((year, index) => ({ year, sales: allSales[index] }));
+  sortedData.sort((a, b) => a.year - b.year);
+
+  // Get the chart canvas
+  var ctx = document.getElementById('salesChart').getContext('2d');
+
+  // Create a line chart with two datasets
+  var myChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+      labels: sortedData.map(item => item.year),
+      datasets: [
+        {
+          label: 'Actual Sales',
+          data: historicalSales,
+          borderColor: 'rgba(75, 192, 192, 1)',
+          fill: false
+        },
+        {
+          label: 'Predicted Sales',
+          data: sortedData.map(item => item.sales),
+          borderColor: 'rgba(255, 99, 132, 1)', // Adjust color as needed
+          fill: false
+        }
+      ]
+    },
+    options: {
+      title: {
+        display: true,
+        text: 'Sales Prediction'
+      },
+      scales: {
+        xAxes: [{
+          type: 'linear',
+          position: 'bottom',
+          ticks: {
+            stepSize: 1
+          }
+        }],
+        yAxes: [{
+          scaleLabel: {
+            display: true,
+            labelString: 'Total Revenue'
+          }
+        }]
+      }
+    }
+  });
+
+  
+</script>
 
 <script>
-    
-  $(document).ready(function () {
-          $.ajax({
-              url: '/get-order-data/', // Replace with the URL for the new view
-              method: 'GET',
-              success: function (data) {
-                  createChart(data);
-              },
-              error: function (error) {
-                  console.error('Error:', error);
-              }
-          });
-      });
+  // Parse the JSON data
+  var annualSalesData = JSON.parse('{{ annual_sales_data|safe }}');
 
-      function createChart(data) {
-          var ctx = document.getElementById('salesChart2').getContext('2d');
+  // Get the table body element
+  var tableBody = document.getElementById('annualSalesTableBody');
 
-          var chartData = data.data;
-          var labels = data.labels;
+  // Iterate through the data and create table rows
+  annualSalesData.forEach(function(record) {
+      var row = document.createElement('tr');
 
-          var datasets = [];
+      var orderDateCell = document.createElement('td');
+      orderDateCell.textContent = record.Order_Date;
+      row.appendChild(orderDateCell);
 
-          for (var product in chartData) {
-              datasets.push({
-                  label: product,
-                  data: chartData[product],
-                  fill: false,
-                  borderColor: getRandomColor()
-              });
-          }
+      var totalRevenueCell = document.createElement('td');
+      totalRevenueCell.textContent = record.Total_Revenue.toLocaleString(); // Format to two decimal places
+      row.appendChild(totalRevenueCell);
 
-          new Chart(ctx, {
-              type: 'line',
-              data: {
-                  labels: labels,
-                  datasets: datasets
-              },
-              options: {
-                  responsive: true,
-                  maintainAspectRatio: false,
-                  scales: {
-                    y: {
-                        suggestedMin: 0,  // Set the minimum value to zero
-                        stepSize: 1,      // Set the interval between ticks to 1
-                        title: {
-                            display: true,
-                            text: 'Sales'   // Set the Y axis title here
-                        }
-                    },
-                    x: {
-                        title: {
-                            display: true,
-                            text: 'Months'  // Set the X axis title here
-                        }
-                    }
-                },
-                  plugins:{
-                      title: {
-                          display: true,
-                          text: 'Sales'
-                      },
-                  }
-              }
-          });
-      }
+      tableBody.appendChild(row);
+  });
+var futuresales = JSON.parse('{{ future_sales|safe }}');
 
-      function getRandomColor() {
-          var letters = '0123456789ABCDEF';
-          var color = '#';
-          for (var i = 0; i < 6; i++) {
-              color += letters[Math.floor(Math.random() * 16)];
-          }
-          return color;
-      }
+// Get the table body element
+var tableBody2 = document.getElementById('PredictedSalesTableBody');
+
+// Iterate through the data and create table rows
+futuresales.forEach(function(record) {
+    var row = document.createElement('tr');
+
+    var orderDateCell = document.createElement('td');
+    orderDateCell.textContent = record.year;
+    row.appendChild(orderDateCell);
+
+    var totalRevenueCell = document.createElement('td');
+    totalRevenueCell.textContent = record.sales.toLocaleString(); // Format to two decimal places
+    row.appendChild(totalRevenueCell);
+
+    tableBody2.appendChild(row);
+});
 </script>
+
 {% endblock %}

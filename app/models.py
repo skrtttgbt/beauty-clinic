@@ -20,7 +20,9 @@ from django.contrib.auth.models import User
 
 ID_LENGTH = 30
 DEVICE_ID_LENGTH = 15
-
+class SalesData(models.Model):
+    date = models.DateField()
+    sales_amount = models.FloatField()
 
 def id_gen() -> str:
     """Generates random string whose length is `ID_LENGTH`"""

@@ -60,7 +60,13 @@ from rest_framework import status
 from django.shortcuts import render
 import pickle
 import pandas as pd
-
+from datetime import timedelta
+from .models import SalesData
+from sklearn.linear_model import LinearRegression
+import numpy as np
+import json
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
 
 
 query_watch = None
@@ -72,6 +78,7 @@ def customer_list(request):
 
         customers_serializer = CustomerSerializer(customers, many=True)
         return JsonResponse(customers_serializer.data, safe=False)
+   
 
 class CheckoutHistoryView(ListView):
     model = Order
@@ -563,53 +570,39 @@ def orders_by_product_month_ajax(request):
 
     return JsonResponse({'data': chart_data, 'labels': labels})
 
+
 def predict_sales(request):
-    form = SalesPredictionForm(request.POST or None)
-    predictions = None
-    pickle_file_path = os.path.join(settings.BASE_DIR, 'assets', 'linear_regression_model3.pkl')
+    # Load sales data from CSV file
+    sales_data = pd.read_csv('dataset/dataset.csv')
+
+    # Convert the 'date' column to a datetime object
+    sales_data['Order_Date'] = pd.to_datetime(sales_data['Order_Date'])
+
+    # Extract features and target variable
+    X = np.array([[(data - sales_data['Order_Date'].min()).days] for data in sales_data['Order_Date']])
+    y = np.array(sales_data['Total_Revenue'])
+
+    # Use Polynomial Regression
+    degree = 5  # Adjust as needed
+    polyreg = make_pipeline(PolynomialFeatures(degree), LinearRegression())
+    polyreg.fit(X, y)
+
+    # Predict future sales
+    future_years = range(sales_data['Order_Date'].max().year + 1, sales_data['Order_Date'].max().year + 6)
+    future_sales = []
+
+    for year in future_years:
+        future_date = sales_data['Order_Date'].max().replace(year=year)
+        days_since_min_date = (future_date - sales_data['Order_Date'].min()).days
+        prediction = polyreg.predict(np.array([[days_since_min_date]]))
+        future_sales.append({'year': year, 'sales': prediction[0]})
+
+    # Group sales_data by year and calculate the sum of sales for each year
+    annual_sales_data = sales_data.groupby(sales_data['Order_Date'].dt.year)['Total_Revenue'].sum().reset_index()
+    annual_sales_data.columns = ['Order_Date', 'Total_Revenue']
+
+    # Convert annual_sales_data and future_sales to JSON
+    annual_sales_json = annual_sales_data.to_json(orient='records')
+    future_sales_json = json.dumps(future_sales)
     
-    selected_year = None
-    selected_month = None
-
-    if request.method == 'POST' and form.is_valid():
-        # Retrieve user input from the form
-        units_sold = form.cleaned_data['units_sold']
-        unit_price = form.cleaned_data['unit_price']
-        order_year = form.cleaned_data['order_year']
-        order_month = form.cleaned_data['order_month']
-
-        # Load the saved model
-        if os.path.exists(pickle_file_path):
-            with open(pickle_file_path, 'rb') as file:
-                loaded_model = pickle.load(file)
-
-            # Prepare user input as DataFrame for prediction
-            new_data = pd.DataFrame({
-                'Units_Sold': [units_sold],
-                'Unit_Price': [unit_price],
-                'Order_Year': [order_year],
-                'Order_Month': [order_month]
-            })
-
-            # Make predictions using the loaded model
-            predictions = loaded_model.predict(new_data)
-        else:
-            print("File not found:", pickle_file_path)
-
-        # Set selected year and month for passing to the template
-        selected_year = order_year
-        selected_month = order_month
-
-    if predictions is not None:
-        # Format the prediction to two decimal places
-        formatted_prediction = round(predictions[0], 2)
-    else:
-        formatted_prediction = None
-
-    context = {
-        'form': form,
-        'predictions': formatted_prediction,
-        'selected_year': selected_year,
-        'selected_month': selected_month
-    }
-    return render(request, 'admin/prediction_page.html', context)
+    return render(request, 'admin/prediction_page.html', {'annual_sales_data': annual_sales_json, 'future_sales': future_sales_json})
