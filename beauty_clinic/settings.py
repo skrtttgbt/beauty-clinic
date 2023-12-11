@@ -43,7 +43,8 @@ ALLOWED_HOSTS = [
     '10.0.2.2',
     '127.0.0.1',
     'beautyclinic.pythonanywhere.com',
-    'localhost'
+    'localhost',
+    'https://beauty-clinic-1d3938ccf50d.herokuapp.com'
 ]
 
 
