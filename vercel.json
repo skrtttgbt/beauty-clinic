@@ -1,6 +1,7 @@
 {
     "build": [
       {
+        "buildCommand": "next build",
         "src": "beauty_clinic/wsgi.py",
         "use": "@vercel/python",
         "config": {
