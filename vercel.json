@@ -1,19 +1,17 @@
 {
-    "build": [
-      {
-        "buildCommand": "next build",
-        "src": "beauty_clinic/wsgi.py",
-        "use": "@vercel/python",
-        "config": {
-          "maxLambdaSize": "800mb" 
-        }
+    "build": {
+      "buildCommand": "next build",
+      "src": "beauty_clinic/wsgi.py",
+      "use": "@vercel/python",
+      "config": {
+        "maxLambdaSize": "800mb"
       }
-    ],
-    "routes" : [
-        {
-            "src" : "/(.*)",
-            "dest": "beauty_clinic/wsgi.py"
-        }
+    },
+    "routes": [
+      {
+        "src": "/(.*)",
+        "dest": "beauty_clinic/wsgi.py"
+      }
     ]
   }
   
