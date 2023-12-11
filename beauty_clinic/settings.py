@@ -40,6 +40,7 @@ SECRET_KEY = 'django-insecure-cmf%aiq(sw8)t+f&h8zpyp_$f0!(jh@c!dw+1z@xk!339zs7dx
 DEBUG = True
 
 ALLOWED_HOSTS = [
+    'localhost',
     '10.0.2.2',
     '127.0.0.1',
     'beautyclinic.pythonanywhere.com',
@@ -120,8 +121,8 @@ if os.environ.get('DJANGO_ENV') == "LOCAL":
             'ENGINE': 'django.db.backends.mysql',
             'NAME': 'beauty-clinic',
             'USER': 'root',
-            'PASSWORD': '',
-            'HOST': '127.0.0.1',
+            'PASSWORD': 'admin',
+            'HOST': 'localhost',
             'PORT': '3306',
             'OPTIONS': {
                     'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
